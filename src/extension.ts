@@ -2,9 +2,21 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CrosscheckCodelensProvider } from './codelens';
 import { buildArgs, checkVersion, resolveCx, spawnCx } from './cx';
+import { clearDecorations } from './decorations';
+import { CrosscheckDocumentSymbolProvider } from './symbols';
+import { createTestController } from './testExplorer';
+import {
+  createEnvStatusBar,
+  createWatchStatusBar,
+  disposeWatch,
+  switchEnv,
+  toggleWatch,
+} from './statusBar';
 
 export function activate(context: vscode.ExtensionContext): void {
   checkVersion();
+
+  // ── Phase 1 ────────────────────────────────────────────────────────────────
 
   const codelens = new CrosscheckCodelensProvider();
 
@@ -31,27 +43,71 @@ export function activate(context: vscode.ExtensionContext): void {
       async (uri?: vscode.Uri) => {
         await newTestFile(uri);
       }
-    ),
+    )
+  );
 
-    // Phase 2/3 commands — registered now so users can discover them
+  // ── Phase 2 ────────────────────────────────────────────────────────────────
+
+  // Document symbols (Outline panel / breadcrumbs)
+  context.subscriptions.push(
+    vscode.languages.registerDocumentSymbolProvider(
+      { pattern: '**/*.cx.yaml' },
+      new CrosscheckDocumentSymbolProvider()
+    )
+  );
+
+  // Test Explorer
+  createTestController(context);
+
+  // Status bar: ENV switcher + WATCH toggle
+  createEnvStatusBar(context);
+  createWatchStatusBar(context);
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('crosscheck.switchEnv', () => switchEnv(context)),
+    vscode.commands.registerCommand('crosscheck.toggleWatch', () => toggleWatch())
+  );
+
+  // Clear inline decorations when the active file is saved
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(doc => {
+      const editor = vscode.window.visibleTextEditors.find(
+        e => e.document === doc
+      );
+      if (editor && doc.fileName.endsWith('.cx.yaml')) {
+        clearDecorations(editor);
+      }
+    })
+  );
+
+  // autoRunOnSave
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(doc => {
+      if (!doc.fileName.endsWith('.cx.yaml')) return;
+      const cfg = vscode.workspace.getConfiguration('crosscheck');
+      if (cfg.get<boolean>('autoRunOnSave', false)) {
+        spawnCx(buildArgs(doc.uri.fsPath, []));
+      }
+    })
+  );
+
+  // ── Phase 3 stubs ──────────────────────────────────────────────────────────
+
+  context.subscriptions.push(
     vscode.commands.registerCommand('crosscheck.explain', () => {
       vscode.window.showInformationMessage('crosscheck: Explain panel coming in Phase 3.');
     }),
-    vscode.commands.registerCommand('crosscheck.switchEnv', () => {
-      vscode.window.showInformationMessage('crosscheck: Environment switcher coming in Phase 2.');
-    }),
     vscode.commands.registerCommand('crosscheck.validate', () => {
       vscode.window.showInformationMessage('crosscheck: Validate integration coming in Phase 3.');
-    }),
-    vscode.commands.registerCommand('crosscheck.toggleWatch', () => {
-      vscode.window.showInformationMessage('crosscheck: Watch mode coming in Phase 2.');
     })
   );
 }
 
 export function deactivate(): void {
-  // nothing to clean up — subscriptions are disposed automatically
+  disposeWatch();
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function newTestFile(uri?: vscode.Uri): Promise<void> {
   let folder: string | undefined;
@@ -78,7 +134,6 @@ async function newTestFile(uri?: vscode.Uri): Promise<void> {
         ? (err as NodeJS.ErrnoException & { stderr: Buffer }).stderr?.toString() ?? ''
         : String(err);
 
-    // cx init exits non-zero only if the file already exists — open it anyway
     if (!stderr.includes('already exists')) {
       vscode.window.showErrorMessage(`crosscheck: ${stderr || String(err)}`);
       return;

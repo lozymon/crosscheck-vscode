@@ -65,43 +65,43 @@
 
 ### Document Symbols (Outline)
 
-- [ ] `src/symbols.ts` — `DocumentSymbolProvider` registered for `**/*.cx.yaml`
-- [ ] Each `name:` entry exposed as a `SymbolKind.Function` symbol
-- [ ] Test names appear in VS Code Outline panel and breadcrumbs
+- [x] `src/symbols.ts` — `DocumentSymbolProvider` registered for `**/*.cx.yaml`
+- [x] Each `name:` entry exposed as a `SymbolKind.Function` symbol
+- [x] Test names appear in VS Code Outline panel and breadcrumbs
 
 ### VS Code Test Explorer
 
-- [ ] `src/testExplorer.ts` — `vscode.TestController` integration
-- [ ] Build test tree: suite (file) → test items (`name:` entries)
-- [ ] `crosscheck.runAll` command
-- [ ] "Run File" / "Run Test": `cx run --reporter json --output-file <tmpfile> <file>` — one process per file
-- [ ] "Run All": spawn one `cx` process per file sequentially and merge results
-- [ ] Map pass/fail/error to test items by name — exit code 2/3 surfaces as suite error
-- [ ] Show retry attempt count in test message when `attempts > 1`
-- [ ] Support "Run All", "Run File", "Run Test" from sidebar
+- [x] `src/testExplorer.ts` — `vscode.TestController` integration
+- [x] Build test tree: suite (file) → test items (`name:` entries)
+- [x] `crosscheck.runAll` command
+- [x] "Run File" / "Run Test": `cx run --reporter json --output-file <tmpfile> <file>` — one process per file
+- [x] "Run All": spawn one `cx` process per file sequentially and merge results
+- [x] Map pass/fail/error to test items by name — exit code 2/3 surfaces as suite error
+- [x] Show retry attempt count in test message when `attempts > 1`
+- [x] Support "Run All", "Run File", "Run Test" from sidebar
 
 ### Inline failure decorations
 
-- [ ] `src/decorations.ts` — `TextEditorDecorationType` for failures
-- [ ] Red gutter icon on failing assertion line
-- [ ] `after` pseudo-element: `expected: X  actual: Y`
-- [ ] Hover `MarkdownString` with full expected vs actual
-- [ ] Clear decorations on next run or file save
+- [x] `src/decorations.ts` — `TextEditorDecorationType` for failures
+- [x] Red gutter icon on failing assertion line
+- [x] `after` pseudo-element: `expected: X  actual: Y`
+- [x] Hover `MarkdownString` with full expected vs actual
+- [x] Clear decorations on next run or file save
 
 ### Environment switcher
 
-- [ ] `src/statusBar.ts` — status bar item `$(gear) ENV: .env`
-- [ ] `QuickPick` listing `.env*` files in workspace root
-- [ ] Active env stored in `WorkspaceState`
-- [ ] `--env-file <path>` passed to all `cx` invocations
-- [ ] `crosscheck.switchEnv` command
+- [x] `src/statusBar.ts` — status bar item `$(gear) ENV: .env`
+- [x] `QuickPick` listing `.env*` files in workspace root
+- [x] Active env stored in `WorkspaceState`
+- [x] `--env-file <path>` passed to all `cx` invocations
+- [x] `crosscheck.switchEnv` command
 
 ### Watch mode
 
-- [ ] `crosscheck.toggleWatch` command — starts/stops `cx run --watch <file>`
-- [ ] Status bar item updates to `$(eye) WATCH` when active
-- [ ] Watch output streamed to the existing `crosscheck` OutputChannel
-- [ ] Toggle kills/restarts child process for the current file
+- [x] `crosscheck.toggleWatch` command — starts/stops `cx run --watch <file>`
+- [x] Status bar item updates to `$(eye) WATCH` when active
+- [x] Watch output streamed to the existing `crosscheck` OutputChannel
+- [x] Toggle kills/restarts child process for the current file
 
 ---
 
@@ -136,8 +136,8 @@
 
 ### `autoRunOnSave` setting
 
-- [ ] `crosscheck.autoRunOnSave` workspace setting
-- [ ] Re-run file tests on save when enabled
+- [x] `crosscheck.autoRunOnSave` workspace setting
+- [x] Re-run file tests on save when enabled
 
 ---
 
