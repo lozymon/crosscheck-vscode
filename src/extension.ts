@@ -1,10 +1,14 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { CrosscheckCaptureDefinitionProvider } from './captureDefinition';
 import { CrosscheckCodelensProvider } from './codelens';
 import { buildArgs, checkVersion, resolveCx, spawnCx } from './cx';
 import { clearDecorations } from './decorations';
+import { showExplainPanel, refreshExplainPanel } from './explainPanel';
+import { CrosscheckQueryPreviewProvider } from './queryPreview';
 import { CrosscheckDocumentSymbolProvider } from './symbols';
 import { createTestController } from './testExplorer';
+import { validateFile, clearFileDiagnostics, getDiagnosticCollection } from './validate';
 import {
   createEnvStatusBar,
   createWatchStatusBar,
@@ -91,14 +95,57 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
-  // ── Phase 3 stubs ──────────────────────────────────────────────────────────
+  // ── Phase 3 ────────────────────────────────────────────────────────────────
 
+  // cx explain side panel
   context.subscriptions.push(
     vscode.commands.registerCommand('crosscheck.explain', () => {
-      vscode.window.showInformationMessage('crosscheck: Explain panel coming in Phase 3.');
-    }),
+      const file = vscode.window.activeTextEditor?.document.uri.fsPath;
+      if (!file?.endsWith('.cx.yaml')) {
+        vscode.window.showInformationMessage('crosscheck: Open a .cx.yaml file to explain.');
+        return;
+      }
+      showExplainPanel(file);
+    })
+  );
+
+  // Refresh explain panel on save
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(doc => {
+      if (doc.fileName.endsWith('.cx.yaml')) {
+        refreshExplainPanel(doc.uri.fsPath);
+      }
+    })
+  );
+
+  // Go-to-definition for {{ varName }} captures
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider(
+      { pattern: '**/*.cx.yaml' },
+      new CrosscheckCaptureDefinitionProvider()
+    )
+  );
+
+  // DB query hover preview
+  context.subscriptions.push(
+    vscode.languages.registerHoverProvider(
+      { pattern: '**/*.cx.yaml' },
+      new CrosscheckQueryPreviewProvider()
+    )
+  );
+
+  // cx validate — run on open and save
+  context.subscriptions.push(getDiagnosticCollection());
+
+  vscode.workspace.textDocuments.forEach(doc => validateFile(doc));
+
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(doc => validateFile(doc)),
+    vscode.workspace.onDidSaveTextDocument(doc => validateFile(doc)),
+    vscode.workspace.onDidCloseTextDocument(doc => clearFileDiagnostics(doc)),
     vscode.commands.registerCommand('crosscheck.validate', () => {
-      vscode.window.showInformationMessage('crosscheck: Validate integration coming in Phase 3.');
+      const doc = vscode.window.activeTextEditor?.document;
+      if (doc) validateFile(doc);
     })
   );
 }

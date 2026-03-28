@@ -109,30 +109,30 @@
 
 ### `cx explain` side panel
 
-- [ ] `src/explainPanel.ts` — `WebviewPanel` (column: Beside)
-- [ ] `crosscheck.explain` command
-- [ ] Shell out `cx explain <currentFile>` — render plain-text output in `<pre>` block with monospace CSS
-- [ ] Refresh on file save
+- [x] `src/explainPanel.ts` — `WebviewPanel` (column: Beside)
+- [x] `crosscheck.explain` command
+- [x] Shell out `cx explain <currentFile>` — render plain-text output in `<pre>` block with monospace CSS
+- [x] Refresh on file save
 
 ### Captured variable go-to-definition
 
-- [ ] `src/captureDefinition.ts` — `DefinitionProvider` for `**/*.cx.yaml`
-- [ ] On go-to-definition of `{{ varName }}`, resolve to the `{{ capture: varName }}` site
-- [ ] Also resolves variables captured in `auth.capture` block
-- [ ] Works within the same file; cross-file support deferred
+- [x] `src/captureDefinition.ts` — `DefinitionProvider` for `**/*.cx.yaml`
+- [x] On go-to-definition of `{{ varName }}`, resolve to the `{{ capture: varName }}` site
+- [x] Also resolves variables captured in `auth.capture` block
+- [x] Works within the same file; cross-file support deferred
 
 ### DB query hover preview
 
-- [ ] `src/queryPreview.ts` — `HoverProvider` for `**/*.cx.yaml`
-- [ ] Resolve `:namedParam` substitutions from `params:` sibling block
-- [ ] Render rendered SQL as fenced code block in hover markdown
+- [x] `src/queryPreview.ts` — `HoverProvider` for `**/*.cx.yaml`
+- [x] Resolve `:namedParam` substitutions from `params:` sibling block
+- [x] Render rendered SQL as fenced code block in hover markdown
 
 ### `cx validate` integration
 
-- [ ] `crosscheck.validate` command — runs `cx validate <file>`, shows errors in Problems panel
-- [ ] Wire to `vscode.languages.createDiagnosticCollection`
-- [ ] Parse plain-text output: `✗  <file>\n   <message>` — regex-extract `line N` from message for best-effort line-level diagnostics; fall back to line 1
-- [ ] Run validate on file open and save
+- [x] `crosscheck.validate` command — runs `cx validate <file>`, shows errors in Problems panel
+- [x] Wire to `vscode.languages.createDiagnosticCollection`
+- [x] Parse plain-text output: `✗  <file>\n   <message>` — regex-extract `line N` from message for best-effort line-level diagnostics; fall back to line 1
+- [x] Run validate on file open and save
 
 ### `autoRunOnSave` setting
 
