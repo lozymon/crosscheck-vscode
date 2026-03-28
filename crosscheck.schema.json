@@ -1,0 +1,254 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://crosscheck.dev/schema.json",
+  "title": "crosscheck test file",
+  "description": "Schema for crosscheck (cx) *.cx.yaml end-to-end API test files.",
+  "type": "object",
+  "required": ["version", "name", "tests"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Must be 1."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name for this test suite."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional longer description of what this suite covers."
+    },
+    "env": {
+      "type": "object",
+      "description": "Fallback variable defaults. Real values should come from .env or shell exports — never commit secrets here.",
+      "additionalProperties": { "type": "string" }
+    },
+    "auth": {
+      "$ref": "#/definitions/auth"
+    },
+    "setup": {
+      "type": "array",
+      "description": "Shell commands run once before all tests.",
+      "items": { "$ref": "#/definitions/hook" }
+    },
+    "teardown": {
+      "type": "array",
+      "description": "Shell commands run once after all tests, even on failure.",
+      "items": { "$ref": "#/definitions/hook" }
+    },
+    "tests": {
+      "type": "array",
+      "description": "Ordered list of test steps.",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/test" }
+    }
+  },
+  "definitions": {
+    "hook": {
+      "type": "object",
+      "required": ["run"],
+      "additionalProperties": false,
+      "properties": {
+        "run": {
+          "type": "string",
+          "description": "Shell command to execute. Environment variables from the crosscheck namespace are available as $VAR."
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "required": ["type", "inject"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["static", "login"],
+          "description": "\"static\" injects a fixed header value. \"login\" fires an HTTP request first to obtain a token."
+        },
+        "request": {
+          "$ref": "#/definitions/request",
+          "description": "HTTP request to perform for login auth. Required when type is \"login\"."
+        },
+        "capture": {
+          "$ref": "#/definitions/captureMap",
+          "description": "Fields to extract from the login response and store as variables."
+        },
+        "inject": {
+          "$ref": "#/definitions/authInject"
+        }
+      }
+    },
+    "authInject": {
+      "type": "object",
+      "required": ["header", "format"],
+      "additionalProperties": false,
+      "properties": {
+        "header": {
+          "type": "string",
+          "description": "HTTP header name to inject into every request (e.g. \"Authorization\")."
+        },
+        "format": {
+          "type": "string",
+          "description": "Header value template. Use {{ varName }} to reference captured variables (e.g. \"Bearer {{ token }}\")."
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "required": ["method", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+          "description": "HTTP method."
+        },
+        "url": {
+          "type": "string",
+          "description": "Request URL. Supports {{ VAR }} interpolation."
+        },
+        "headers": {
+          "type": "object",
+          "description": "Additional HTTP headers. Values support {{ VAR }} interpolation.",
+          "additionalProperties": { "type": "string" }
+        },
+        "body": {
+          "description": "Request body serialized as JSON. Supports nested objects."
+        }
+      }
+    },
+    "responseAssert": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "integer",
+          "description": "Expected HTTP status code (e.g. 200, 201, 404)."
+        },
+        "headers": {
+          "type": "object",
+          "description": "Expected response headers. Values support {{ VAR }} interpolation.",
+          "additionalProperties": { "type": "string" }
+        },
+        "body": {
+          "type": "object",
+          "description": "Expected body fields. String values can be: exact match, /regex/, {{ capture: varName }}, or {{ VAR }} interpolation.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "captureMap": {
+      "type": "object",
+      "description": "Maps variable names to JSONPath expressions (e.g. token: \"$.accessToken\").",
+      "additionalProperties": { "type": "string" }
+    },
+    "dbAssert": {
+      "type": "object",
+      "required": ["adapter", "query", "expect"],
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {
+          "type": "string",
+          "enum": ["postgres", "mysql", "mongodb", "redis", "dynamodb", "s3", "sqs", "sns"],
+          "description": "Database or service adapter to use."
+        },
+        "query": {
+          "type": "string",
+          "description": "SQL query or key to look up. Use :varName for named parameters."
+        },
+        "params": {
+          "type": "object",
+          "description": "Named parameter values for the query. Values support {{ VAR }} interpolation.",
+          "additionalProperties": true
+        },
+        "wait_for": {
+          "$ref": "#/definitions/waitFor"
+        },
+        "expect": {
+          "type": "array",
+          "description": "Expected rows. Each object maps column names to expected values.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "waitFor": {
+      "type": "object",
+      "required": ["timeout", "interval"],
+      "additionalProperties": false,
+      "description": "Poll the assertion until it passes or the timeout is reached. Useful for async / queue-driven flows.",
+      "properties": {
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ms|s|m)$",
+          "description": "Maximum time to wait before failing (e.g. \"10s\", \"500ms\")."
+        },
+        "interval": {
+          "type": "string",
+          "pattern": "^[0-9]+(ms|s|m)$",
+          "description": "How long to wait between retries (e.g. \"500ms\", \"1s\")."
+        }
+      }
+    },
+    "test": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique name for this test step. Used in output and --filter matching."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional longer description of what this test verifies."
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ms|s|m)$",
+          "description": "Per-test timeout (e.g. \"5s\"). Overrides global default."
+        },
+        "retry": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of times to retry on failure (Phase 2)."
+        },
+        "retry_delay": {
+          "type": "string",
+          "pattern": "^[0-9]+(ms|s|m)$",
+          "description": "Delay between retries (Phase 2)."
+        },
+        "setup": {
+          "type": "array",
+          "description": "Shell commands run before this test.",
+          "items": { "$ref": "#/definitions/hook" }
+        },
+        "teardown": {
+          "type": "array",
+          "description": "Shell commands run after this test.",
+          "items": { "$ref": "#/definitions/hook" }
+        },
+        "request": {
+          "$ref": "#/definitions/request"
+        },
+        "response": {
+          "$ref": "#/definitions/responseAssert"
+        },
+        "database": {
+          "type": "array",
+          "description": "Database or service assertions to run after the HTTP request.",
+          "items": { "$ref": "#/definitions/dbAssert" }
+        },
+        "services": {
+          "type": "array",
+          "description": "Service assertions (Redis, SQS, etc.) to run after the HTTP request.",
+          "items": { "$ref": "#/definitions/dbAssert" }
+        }
+      }
+    }
+  }
+}

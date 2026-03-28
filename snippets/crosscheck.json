@@ -1,0 +1,95 @@
+{
+  "crosscheck test block": {
+    "prefix": "cx-test",
+    "description": "Add a crosscheck test step",
+    "body": [
+      "- name: ${1:test name}",
+      "  request:",
+      "    method: ${2|GET,POST,PUT,PATCH,DELETE|}",
+      "    url: \"{{ BASE_URL }}/${3:path}\"",
+      "  response:",
+      "    status: ${4:200}",
+      "$0"
+    ]
+  },
+  "crosscheck test block with body": {
+    "prefix": "cx-test-body",
+    "description": "Add a crosscheck test step with request body and capture",
+    "body": [
+      "- name: ${1:test name}",
+      "  request:",
+      "    method: ${2|POST,PUT,PATCH|}",
+      "    url: \"{{ BASE_URL }}/${3:path}\"",
+      "    body:",
+      "      ${4:field}: \"${5:value}\"",
+      "  response:",
+      "    status: ${6:201}",
+      "    body:",
+      "      id: \"{{ capture: ${7:resourceId} }}\"",
+      "$0"
+    ]
+  },
+  "crosscheck database assertion": {
+    "prefix": "cx-db",
+    "description": "Add a database assertion block",
+    "body": [
+      "database:",
+      "  - adapter: ${1|postgres,mysql,mongodb|}",
+      "    query: \"SELECT ${2:*} FROM ${3:table} WHERE ${4:id} = :${4:id}\"",
+      "    params:",
+      "      ${4:id}: \"{{ ${5:varName} }}\"",
+      "    expect:",
+      "      - ${6:column}: ${7:value}",
+      "$0"
+    ]
+  },
+  "crosscheck database assertion with polling": {
+    "prefix": "cx-db-wait",
+    "description": "Add a database assertion with async polling",
+    "body": [
+      "database:",
+      "  - adapter: ${1|postgres,mysql,mongodb|}",
+      "    query: \"SELECT ${2:*} FROM ${3:table} WHERE ${4:id} = :${4:id}\"",
+      "    params:",
+      "      ${4:id}: \"{{ ${5:varName} }}\"",
+      "    wait_for:",
+      "      timeout: ${6:10s}",
+      "      interval: ${7:500ms}",
+      "    expect:",
+      "      - ${8:column}: ${9:value}",
+      "$0"
+    ]
+  },
+  "crosscheck auth login": {
+    "prefix": "cx-auth-login",
+    "description": "Add a login-based auth block",
+    "body": [
+      "auth:",
+      "  type: login",
+      "  request:",
+      "    method: POST",
+      "    url: \"{{ AUTH_SERVICE }}/auth/login\"",
+      "    body:",
+      "      email: \"{{ TEST_EMAIL }}\"",
+      "      password: \"{{ TEST_PASSWORD }}\"",
+      "  capture:",
+      "    ${1:token}: \"\\$.${2:accessToken}\"",
+      "  inject:",
+      "    header: Authorization",
+      "    format: \"Bearer {{ ${1:token} }}\"",
+      "$0"
+    ]
+  },
+  "crosscheck auth static": {
+    "prefix": "cx-auth-static",
+    "description": "Add a static token auth block",
+    "body": [
+      "auth:",
+      "  type: static",
+      "  inject:",
+      "    header: ${1:Authorization}",
+      "    format: \"${2:Bearer} {{ ${3:API_TOKEN} }}\"",
+      "$0"
+    ]
+  }
+}

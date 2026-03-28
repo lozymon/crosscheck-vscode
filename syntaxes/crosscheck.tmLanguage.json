@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "crosscheck YAML",
+  "scopeName": "source.cx.yaml",
+  "injectionSelector": "L:source.yaml - comment",
+  "patterns": [
+    { "include": "#variable-capture" },
+    { "include": "#variable-interpolation" },
+    { "include": "#named-param" },
+    { "include": "#toplevel-key" }
+  ],
+  "repository": {
+    "variable-capture": {
+      "comment": "{{ capture: varName }} — extracts a value from the response and stores it",
+      "match": "(\\{\\{)\\s*(capture:\\s*)(\\w+)\\s*(\\}\\})",
+      "captures": {
+        "1": { "name": "punctuation.definition.template.begin.crosscheck" },
+        "2": { "name": "keyword.operator.capture.crosscheck" },
+        "3": { "name": "variable.other.capture.crosscheck" },
+        "4": { "name": "punctuation.definition.template.end.crosscheck" }
+      }
+    },
+    "variable-interpolation": {
+      "comment": "{{ VAR }} — interpolates a variable value",
+      "match": "(\\{\\{)\\s*(\\w+)\\s*(\\}\\})",
+      "captures": {
+        "1": { "name": "punctuation.definition.template.begin.crosscheck" },
+        "2": { "name": "variable.other.crosscheck" },
+        "3": { "name": "punctuation.definition.template.end.crosscheck" }
+      }
+    },
+    "named-param": {
+      "comment": ":paramName in SQL queries / URLs — named parameter placeholder",
+      "match": "(?<=[\\s\"',(=]):[a-zA-Z_][a-zA-Z0-9_]*\\b",
+      "name": "variable.parameter.named.crosscheck"
+    },
+    "toplevel-key": {
+      "comment": "crosscheck top-level and structural keys",
+      "match": "^(version|name|description|env|auth|mock|setup|teardown|tests|request|response|database|services|wait_for|expect|params|capture|inject)(?=\\s*:)",
+      "captures": {
+        "1": { "name": "keyword.control.crosscheck" }
+      }
+    }
+  }
+}

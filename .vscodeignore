@@ -1,0 +1,14 @@
+.vscode/**
+src/**
+test/**
+.eslintrc.json
+tsconfig.json
+esbuild.js
+node_modules/**
+.github/**
+**/*.map
+**/*.ts
+!dist/**
+!syntaxes/**
+!snippets/**
+!crosscheck.schema.json

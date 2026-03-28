@@ -1,0 +1,153 @@
+{
+  "name": "crosscheck",
+  "displayName": "crosscheck",
+  "description": "VS Code extension for crosscheck (cx) API test files — syntax highlighting, CodeLens, schema autocomplete, and more.",
+  "version": "0.1.0",
+  "publisher": "lozymon",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lozymon/crosscheck-vscode"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": ["Testing", "Linters"],
+  "keywords": ["crosscheck", "cx", "api testing", "yaml"],
+  "activationEvents": [
+    "onLanguage:yaml",
+    "workspaceContains:**/*.cx.yaml"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "grammars": [
+      {
+        "scopeName": "source.cx.yaml",
+        "path": "./syntaxes/crosscheck.tmLanguage.json",
+        "injectTo": ["source.yaml"]
+      }
+    ],
+    "yamlValidation": [
+      {
+        "fileMatch": "**/*.cx.yaml",
+        "url": "./crosscheck.schema.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "yaml",
+        "path": "./snippets/crosscheck.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "crosscheck.runTest",
+        "title": "crosscheck: Run Test",
+        "category": "crosscheck"
+      },
+      {
+        "command": "crosscheck.runFile",
+        "title": "crosscheck: Run File",
+        "category": "crosscheck"
+      },
+      {
+        "command": "crosscheck.runAll",
+        "title": "crosscheck: Run All Tests",
+        "category": "crosscheck"
+      },
+      {
+        "command": "crosscheck.newTestFile",
+        "title": "crosscheck: New Test File",
+        "category": "crosscheck"
+      },
+      {
+        "command": "crosscheck.explain",
+        "title": "crosscheck: Explain This File",
+        "category": "crosscheck"
+      },
+      {
+        "command": "crosscheck.switchEnv",
+        "title": "crosscheck: Switch Environment",
+        "category": "crosscheck"
+      },
+      {
+        "command": "crosscheck.validate",
+        "title": "crosscheck: Validate File",
+        "category": "crosscheck"
+      },
+      {
+        "command": "crosscheck.toggleWatch",
+        "title": "crosscheck: Toggle Watch Mode",
+        "category": "crosscheck"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "crosscheck.newTestFile",
+          "when": "explorerResourceIsFolder",
+          "group": "crosscheck@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "crosscheck.runFile",
+          "when": "resourceExtname == .yaml && resourceFilename =~ /\\.cx\\.yaml$/",
+          "group": "crosscheck@1"
+        },
+        {
+          "command": "crosscheck.validate",
+          "when": "resourceExtname == .yaml && resourceFilename =~ /\\.cx\\.yaml$/",
+          "group": "crosscheck@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "crosscheck",
+      "properties": {
+        "crosscheck.executablePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the cx binary. Leave empty to use PATH."
+        },
+        "crosscheck.defaultEnvFile": {
+          "type": "string",
+          "default": ".env",
+          "description": "Default .env file passed as --env-file to all cx invocations."
+        },
+        "crosscheck.autoRunOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically re-run tests for the active file on save."
+        },
+        "crosscheck.insecure": {
+          "type": "boolean",
+          "default": false,
+          "description": "Pass --insecure to cx, skipping TLS certificate verification."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "lint": "eslint src --ext .ts",
+    "test": "vscode-test",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.75.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/vsce": "^2.24.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0"
+  }
+}
