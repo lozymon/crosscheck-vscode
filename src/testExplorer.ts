@@ -13,6 +13,27 @@ import {
   RunMeta,
 } from './resultsPanel';
 
+export async function runViaController(
+  ctrl: vscode.TestController,
+  filePath: string,
+  testName?: string,
+): Promise<void> {
+  const suiteItem = ctrl.items.get(filePath);
+  if (!suiteItem) return;
+
+  let include: vscode.TestItem[] | undefined;
+  if (testName) {
+    const child = findTestItem(suiteItem, testName);
+    if (child) include = [child];
+  } else {
+    include = [suiteItem];
+  }
+
+  const tokenSource = new vscode.CancellationTokenSource();
+  const request = new vscode.TestRunRequest(include);
+  await runTests(ctrl, request, tokenSource.token);
+}
+
 export function createTestController(
   context: vscode.ExtensionContext,
 ): vscode.TestController {

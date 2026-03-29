@@ -8,7 +8,7 @@ import { clearDecorations } from './decorations';
 import { showExplainPanel, refreshExplainPanel } from './explainPanel';
 import { CrosscheckQueryPreviewProvider } from './queryPreview';
 import { CrosscheckDocumentSymbolProvider } from './symbols';
-import { createTestController } from './testExplorer';
+import { createTestController, runViaController } from './testExplorer';
 import {
   validateFile,
   clearFileDiagnostics,
@@ -33,12 +33,12 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       'crosscheck.runTest',
       (file: string, testName: string) => {
-        spawnCx(buildArgs(file, ['--filter', testName]));
+        runViaController(ctrl, file, testName);
       },
     ),
 
     vscode.commands.registerCommand('crosscheck.runFile', (file: string) => {
-      spawnCx(buildArgs(file, []));
+      runViaController(ctrl, file);
     }),
 
     vscode.commands.registerCommand('crosscheck.runAll', () => {
@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   // Test Explorer
-  createTestController(context);
+  const ctrl = createTestController(context);
 
   // Env tree view (Testing panel sidebar)
   const envTree = new EnvTreeProvider(context);

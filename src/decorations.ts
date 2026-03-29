@@ -5,22 +5,15 @@ export interface FailureHint {
   message: string;
 }
 
-const failureDecorationType = vscode.window.createTextEditorDecorationType({
-  gutterIconPath: new vscode.ThemeIcon('testing-failed-icon').id as never,
-  overviewRulerColor: new vscode.ThemeColor('testing.iconFailed'),
-  overviewRulerLane: vscode.OverviewRulerLane.Right,
-  after: {
-    color: new vscode.ThemeColor('editorCodeLens.foreground'),
-    margin: '0 0 0 2em',
-  },
-});
-
 // Track decorations per editor so we can clear them individually
-const activeDecorations = new WeakMap<vscode.TextEditor, vscode.TextEditorDecorationType[]>();
+const activeDecorations = new WeakMap<
+  vscode.TextEditor,
+  vscode.TextEditorDecorationType[]
+>();
 
 export function applyDecorations(
   editor: vscode.TextEditor,
-  failures: FailureHint[]
+  failures: FailureHint[],
 ): void {
   clearDecorations(editor);
 
@@ -30,24 +23,20 @@ export function applyDecorations(
   const types: vscode.TextEditorDecorationType[] = [];
 
   for (const f of failures) {
-    // Truncate long messages so they don't swamp the line
-    const truncated = f.message.length > 80 ? f.message.slice(0, 77) + '…' : f.message;
-
     const type = vscode.window.createTextEditorDecorationType({
       overviewRulerColor: new vscode.ThemeColor('testing.iconFailed'),
       overviewRulerLane: vscode.OverviewRulerLane.Right,
-      after: {
-        contentText: `  ${truncated}`,
-        color: new vscode.ThemeColor('editorCodeLens.foreground'),
-      },
-      gutterIconSize: 'contain',
+      backgroundColor: new vscode.ThemeColor('inputValidation.errorBackground'),
+      borderRadius: '2px',
     });
 
-    const pos = new vscode.Position(f.line, 0);
-    const range = new vscode.Range(pos, pos);
+    const line = editor.document.lineAt(
+      Math.min(f.line, editor.document.lineCount - 1),
+    );
+    const range = new vscode.Range(line.range.end, line.range.end);
 
     const hoverMessage = new vscode.MarkdownString(
-      `**crosscheck failure**\n\n\`\`\`\n${f.message}\n\`\`\``
+      `**crosscheck failure**\n\n\`\`\`\n${f.message}\n\`\`\``,
     );
     hoverMessage.isTrusted = true;
 
@@ -61,7 +50,7 @@ export function applyDecorations(
 export function clearDecorations(editor: vscode.TextEditor): void {
   const types = activeDecorations.get(editor);
   if (types) {
-    types.forEach(t => t.dispose());
+    types.forEach((t) => t.dispose());
     activeDecorations.delete(editor);
   }
 }
