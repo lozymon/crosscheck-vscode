@@ -11,10 +11,12 @@ const AUTH_CAPTURE_ENTRY = /^(\s+)(\w+)\s*:\s*["']?\$\./;
 // Matches a variable usage:  {{ varName }}  (not a capture definition)
 const VAR_USAGE = /\{\{\s*(\w+)\s*\}\}/;
 
-export class CrosscheckCaptureDefinitionProvider implements vscode.DefinitionProvider {
+export class CrosscheckCaptureDefinitionProvider
+  implements vscode.DefinitionProvider
+{
   provideDefinition(
     document: vscode.TextDocument,
-    position: vscode.Position
+    position: vscode.Position,
   ): vscode.Location | undefined {
     const line = document.lineAt(position).text;
     const offset = position.character;
@@ -39,7 +41,7 @@ export class CrosscheckCaptureDefinitionProvider implements vscode.DefinitionPro
         if (m[1] === varName) {
           return new vscode.Location(
             document.uri,
-            new vscode.Position(i, m.index)
+            new vscode.Position(i, m.index),
           );
         }
       }
@@ -50,8 +52,14 @@ export class CrosscheckCaptureDefinitionProvider implements vscode.DefinitionPro
     if (authCaptureLine !== -1) {
       return new vscode.Location(
         document.uri,
-        new vscode.Position(authCaptureLine, 0)
+        new vscode.Position(authCaptureLine, 0),
       );
+    }
+
+    // 3. Look for env block entries: env:\n  VAR_NAME: value
+    const envLine = findEnvEntry(lines, varName);
+    if (envLine !== -1) {
+      return new vscode.Location(document.uri, new vscode.Position(envLine, 0));
     }
 
     return undefined;
@@ -61,7 +69,7 @@ export class CrosscheckCaptureDefinitionProvider implements vscode.DefinitionPro
 function findTokenAtOffset(
   line: string,
   pattern: RegExp,
-  offset: number
+  offset: number,
 ): { group: string; start: number; end: number } | undefined {
   const re = new RegExp(pattern.source, 'g');
   let m: RegExpExecArray | null;
@@ -117,6 +125,34 @@ function findAuthCaptureEntry(lines: string[], varName: string): number {
         if (/^\s{2}\S/.test(line) && !/^\s{4}/.test(line)) {
           inCapture = false;
         }
+      }
+    }
+  }
+
+  return -1;
+}
+
+function findEnvEntry(lines: string[], varName: string): number {
+  let inEnv = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (/^env\s*:/.test(line)) {
+      inEnv = true;
+      continue;
+    }
+
+    if (inEnv) {
+      // Exit env block on next top-level key
+      if (/^\S/.test(line)) {
+        inEnv = false;
+        continue;
+      }
+
+      const m = line.match(/^\s+(\w+)\s*:/);
+      if (m && m[1] === varName) {
+        return i;
       }
     }
   }
