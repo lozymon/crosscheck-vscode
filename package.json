@@ -28,6 +28,14 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "views": {
+      "test": [
+        {
+          "id": "crosscheck.envPicker",
+          "name": "Environment"
+        }
+      ]
+    },
     "grammars": [
       {
         "scopeName": "source.cx.yaml",
@@ -76,8 +84,14 @@
         "category": "crosscheck"
       },
       {
-        "command": "crosscheck.switchEnv",
-        "title": "crosscheck: Switch Environment",
+        "command": "crosscheck.selectEnv",
+        "title": "crosscheck: Select Environment",
+        "category": "crosscheck"
+      },
+      {
+        "command": "crosscheck.refreshEnv",
+        "title": "crosscheck: Refresh Environments",
+        "icon": "$(refresh)",
         "category": "crosscheck"
       },
       {
@@ -97,6 +111,13 @@
           "command": "crosscheck.newTestFile",
           "when": "explorerResourceIsFolder",
           "group": "crosscheck@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "crosscheck.refreshEnv",
+          "when": "view == crosscheck.envPicker",
+          "group": "navigation"
         }
       ],
       "editor/context": [

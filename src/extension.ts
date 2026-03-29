@@ -14,13 +14,8 @@ import {
   clearFileDiagnostics,
   getDiagnosticCollection,
 } from './validate';
-import {
-  createEnvStatusBar,
-  createWatchStatusBar,
-  disposeWatch,
-  switchEnv,
-  toggleWatch,
-} from './statusBar';
+import { EnvTreeProvider } from './envTree';
+import { createWatchStatusBar, disposeWatch, toggleWatch } from './statusBar';
 
 export function activate(context: vscode.ExtensionContext): void {
   checkVersion();
@@ -71,14 +66,25 @@ export function activate(context: vscode.ExtensionContext): void {
   // Test Explorer
   createTestController(context);
 
-  // Status bar: ENV switcher + WATCH toggle
-  createEnvStatusBar(context);
-  createWatchStatusBar(context);
-
+  // Env tree view (Testing panel sidebar)
+  const envTree = new EnvTreeProvider(context);
+  const envTreeView = vscode.window.createTreeView('crosscheck.envPicker', {
+    treeDataProvider: envTree,
+    showCollapseAll: false,
+  });
   context.subscriptions.push(
-    vscode.commands.registerCommand('crosscheck.switchEnv', () =>
-      switchEnv(context),
+    envTreeView,
+    vscode.commands.registerCommand('crosscheck.selectEnv', (item) =>
+      envTree.selectEnv(item),
     ),
+    vscode.commands.registerCommand('crosscheck.refreshEnv', () =>
+      envTree.refresh(),
+    ),
+  );
+
+  // Status bar: WATCH toggle
+  createWatchStatusBar(context);
+  context.subscriptions.push(
     vscode.commands.registerCommand('crosscheck.toggleWatch', () =>
       toggleWatch(),
     ),

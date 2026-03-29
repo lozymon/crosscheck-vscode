@@ -87,9 +87,16 @@ export function checkVersion(): void {
   });
 }
 
+let _activeEnvFile: string | undefined;
+
+export function setActiveEnvFile(p: string): void {
+  _activeEnvFile = p;
+}
+
 export function buildArgs(file: string | undefined, extra: string[]): string[] {
   const config = vscode.workspace.getConfiguration('crosscheck');
-  const envFile = config.get<string>('defaultEnvFile', '.env');
+  const envFile =
+    _activeEnvFile ?? config.get<string>('defaultEnvFile', '.env');
   const insecure = config.get<boolean>('insecure', false);
 
   const args: string[] = file ? ['run', file] : ['run'];
