@@ -2,13 +2,18 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CrosscheckCaptureDefinitionProvider } from './captureDefinition';
 import { CrosscheckCodelensProvider } from './codelens';
+import { CrosscheckCompletionProvider } from './completion';
 import { buildArgs, checkVersion, resolveCx, spawnCx } from './cx';
 import { clearDecorations } from './decorations';
 import { showExplainPanel, refreshExplainPanel } from './explainPanel';
 import { CrosscheckQueryPreviewProvider } from './queryPreview';
 import { CrosscheckDocumentSymbolProvider } from './symbols';
 import { createTestController } from './testExplorer';
-import { validateFile, clearFileDiagnostics, getDiagnosticCollection } from './validate';
+import {
+  validateFile,
+  clearFileDiagnostics,
+  getDiagnosticCollection,
+} from './validate';
 import {
   createEnvStatusBar,
   createWatchStatusBar,
@@ -25,13 +30,16 @@ export function activate(context: vscode.ExtensionContext): void {
   const codelens = new CrosscheckCodelensProvider();
 
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider({ pattern: '**/*.cx.yaml' }, codelens),
+    vscode.languages.registerCodeLensProvider(
+      { pattern: '**/*.cx.yaml' },
+      codelens,
+    ),
 
     vscode.commands.registerCommand(
       'crosscheck.runTest',
       (file: string, testName: string) => {
         spawnCx(buildArgs(file, ['--filter', testName]));
-      }
+      },
     ),
 
     vscode.commands.registerCommand('crosscheck.runFile', (file: string) => {
@@ -46,8 +54,8 @@ export function activate(context: vscode.ExtensionContext): void {
       'crosscheck.newTestFile',
       async (uri?: vscode.Uri) => {
         await newTestFile(uri);
-      }
-    )
+      },
+    ),
   );
 
   // ── Phase 2 ────────────────────────────────────────────────────────────────
@@ -56,8 +64,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.languages.registerDocumentSymbolProvider(
       { pattern: '**/*.cx.yaml' },
-      new CrosscheckDocumentSymbolProvider()
-    )
+      new CrosscheckDocumentSymbolProvider(),
+    ),
   );
 
   // Test Explorer
@@ -68,31 +76,35 @@ export function activate(context: vscode.ExtensionContext): void {
   createWatchStatusBar(context);
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('crosscheck.switchEnv', () => switchEnv(context)),
-    vscode.commands.registerCommand('crosscheck.toggleWatch', () => toggleWatch())
+    vscode.commands.registerCommand('crosscheck.switchEnv', () =>
+      switchEnv(context),
+    ),
+    vscode.commands.registerCommand('crosscheck.toggleWatch', () =>
+      toggleWatch(),
+    ),
   );
 
   // Clear inline decorations when the active file is saved
   context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(doc => {
+    vscode.workspace.onDidSaveTextDocument((doc) => {
       const editor = vscode.window.visibleTextEditors.find(
-        e => e.document === doc
+        (e) => e.document === doc,
       );
       if (editor && doc.fileName.endsWith('.cx.yaml')) {
         clearDecorations(editor);
       }
-    })
+    }),
   );
 
   // autoRunOnSave
   context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(doc => {
+    vscode.workspace.onDidSaveTextDocument((doc) => {
       if (!doc.fileName.endsWith('.cx.yaml')) return;
       const cfg = vscode.workspace.getConfiguration('crosscheck');
       if (cfg.get<boolean>('autoRunOnSave', false)) {
         spawnCx(buildArgs(doc.uri.fsPath, []));
       }
-    })
+    }),
   );
 
   // ── Phase 3 ────────────────────────────────────────────────────────────────
@@ -102,51 +114,63 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('crosscheck.explain', () => {
       const file = vscode.window.activeTextEditor?.document.uri.fsPath;
       if (!file?.endsWith('.cx.yaml')) {
-        vscode.window.showInformationMessage('crosscheck: Open a .cx.yaml file to explain.');
+        vscode.window.showInformationMessage(
+          'crosscheck: Open a .cx.yaml file to explain.',
+        );
         return;
       }
       showExplainPanel(file);
-    })
+    }),
   );
 
   // Refresh explain panel on save
   context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(doc => {
+    vscode.workspace.onDidSaveTextDocument((doc) => {
       if (doc.fileName.endsWith('.cx.yaml')) {
         refreshExplainPanel(doc.uri.fsPath);
       }
-    })
+    }),
   );
 
   // Go-to-definition for {{ varName }} captures
   context.subscriptions.push(
     vscode.languages.registerDefinitionProvider(
       { pattern: '**/*.cx.yaml' },
-      new CrosscheckCaptureDefinitionProvider()
-    )
+      new CrosscheckCaptureDefinitionProvider(),
+    ),
+  );
+
+  // Schema-aware autocomplete for *.cx.yaml (keys + enum values)
+  context.subscriptions.push(
+    vscode.languages.registerCompletionItemProvider(
+      { pattern: '**/*.cx.yaml' },
+      new CrosscheckCompletionProvider(),
+      ':',
+      ' ', // trigger on these characters too
+    ),
   );
 
   // DB query hover preview
   context.subscriptions.push(
     vscode.languages.registerHoverProvider(
       { pattern: '**/*.cx.yaml' },
-      new CrosscheckQueryPreviewProvider()
-    )
+      new CrosscheckQueryPreviewProvider(),
+    ),
   );
 
   // cx validate — run on open and save
   context.subscriptions.push(getDiagnosticCollection());
 
-  vscode.workspace.textDocuments.forEach(doc => validateFile(doc));
+  vscode.workspace.textDocuments.forEach((doc) => validateFile(doc));
 
   context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument(doc => validateFile(doc)),
-    vscode.workspace.onDidSaveTextDocument(doc => validateFile(doc)),
-    vscode.workspace.onDidCloseTextDocument(doc => clearFileDiagnostics(doc)),
+    vscode.workspace.onDidOpenTextDocument((doc) => validateFile(doc)),
+    vscode.workspace.onDidSaveTextDocument((doc) => validateFile(doc)),
+    vscode.workspace.onDidCloseTextDocument((doc) => clearFileDiagnostics(doc)),
     vscode.commands.registerCommand('crosscheck.validate', () => {
       const doc = vscode.window.activeTextEditor?.document;
       if (doc) validateFile(doc);
-    })
+    }),
   );
 }
 
@@ -178,7 +202,9 @@ async function newTestFile(uri?: vscode.Uri): Promise<void> {
   } catch (err: unknown) {
     const stderr =
       err instanceof Error && 'stderr' in err
-        ? (err as NodeJS.ErrnoException & { stderr: Buffer }).stderr?.toString() ?? ''
+        ? ((
+            err as NodeJS.ErrnoException & { stderr: Buffer }
+          ).stderr?.toString() ?? '')
         : String(err);
 
     if (!stderr.includes('already exists')) {

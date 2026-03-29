@@ -11,6 +11,9 @@ const AUTH_CAPTURE_ENTRY = /^(\s+)(\w+)\s*:\s*["']?\$\./;
 // Matches a variable usage:  {{ varName }}  (not a capture definition)
 const VAR_USAGE = /\{\{\s*(\w+)\s*\}\}/;
 
+// Matches a SQL named parameter: :paramName (not preceded by another colon)
+const SQL_PARAM_USAGE = /(?<![:\w]):(\w+)/;
+
 export class CrosscheckCaptureDefinitionProvider
   implements vscode.DefinitionProvider
 {
@@ -21,6 +24,21 @@ export class CrosscheckCaptureDefinitionProvider
     const line = document.lineAt(position).text;
     const offset = position.character;
 
+    const text = document.getText();
+    const lines = text.split('\n');
+
+    // Check for SQL named parameter :paramName first
+    const sqlParamMatch = findTokenAtOffset(line, SQL_PARAM_USAGE, offset);
+    if (sqlParamMatch && !/\{\{\s*capture:/.test(line)) {
+      const paramLine = findParamsEntry(lines, sqlParamMatch.group);
+      if (paramLine !== -1) {
+        return new vscode.Location(
+          document.uri,
+          new vscode.Position(paramLine, 0),
+        );
+      }
+    }
+
     // Find which {{ varName }} the cursor is on
     const usageMatch = findTokenAtOffset(line, VAR_USAGE, offset);
     if (!usageMatch) return undefined;
@@ -29,9 +47,6 @@ export class CrosscheckCaptureDefinitionProvider
 
     // Skip if cursor is already on a capture: definition
     if (/\{\{\s*capture:/.test(line)) return undefined;
-
-    const text = document.getText();
-    const lines = text.split('\n');
 
     // 1. Look for {{ capture: varName }} in response body fields
     for (let i = 0; i < lines.length; i++) {
@@ -125,6 +140,38 @@ function findAuthCaptureEntry(lines: string[], varName: string): number {
         if (/^\s{2}\S/.test(line) && !/^\s{4}/.test(line)) {
           inCapture = false;
         }
+      }
+    }
+  }
+
+  return -1;
+}
+
+function findParamsEntry(lines: string[], paramName: string): number {
+  let inParams = false;
+  let paramsIndent = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    const paramsMatch = line.match(/^(\s+)params\s*:/);
+    if (paramsMatch) {
+      inParams = true;
+      paramsIndent = paramsMatch[1].length;
+      continue;
+    }
+
+    if (inParams) {
+      // Exit params block when dedented back to or past the params indent level
+      const currentIndent = line.match(/^(\s*)/)?.[1].length ?? 0;
+      if (line.trim() !== '' && currentIndent <= paramsIndent) {
+        inParams = false;
+        continue;
+      }
+
+      const keyMatch = line.match(/^\s+(\w+)\s*:/);
+      if (keyMatch && keyMatch[1] === paramName) {
+        return i;
       }
     }
   }

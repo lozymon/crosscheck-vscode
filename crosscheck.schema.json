@@ -25,6 +25,17 @@
       "description": "Fallback variable defaults. Real values should come from .env or shell exports — never commit secrets here.",
       "additionalProperties": { "type": "string" }
     },
+    "mock": {
+      "type": "object",
+      "description": "Start a local mock HTTP server. MOCK_URL is injected automatically as an environment variable.",
+      "additionalProperties": false,
+      "properties": {
+        "port": {
+          "type": "integer",
+          "description": "Port for the mock server to listen on (e.g. 9099)."
+        }
+      }
+    },
     "auth": {
       "$ref": "#/definitions/auth"
     },
@@ -146,17 +157,39 @@
     },
     "dbAssert": {
       "type": "object",
-      "required": ["adapter", "query", "expect"],
+      "required": ["adapter", "expect"],
       "additionalProperties": false,
       "properties": {
         "adapter": {
           "type": "string",
-          "enum": ["postgres", "mysql", "mongodb", "redis", "dynamodb", "s3", "sqs", "sns"],
+          "enum": [
+            "postgres",
+            "mysql",
+            "mongodb",
+            "redis",
+            "dynamodb",
+            "s3",
+            "sqs",
+            "sns"
+          ],
           "description": "Database or service adapter to use."
         },
         "query": {
           "type": "string",
-          "description": "SQL query or key to look up. Use :varName for named parameters."
+          "description": "SQL query to run. Use :varName for named parameters (e.g. SELECT * FROM users WHERE id = :userId)."
+        },
+        "key": {
+          "type": "string",
+          "description": "Redis key to look up. Supports {{ VAR }} interpolation (e.g. user:{{ userId }})."
+        },
+        "path": {
+          "type": "string",
+          "description": "Mock server path to match (e.g. /webhook). Used with adapter: mock."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+          "description": "HTTP method to match on the mock server. Used with adapter: mock."
         },
         "params": {
           "type": "object",
@@ -167,12 +200,22 @@
           "$ref": "#/definitions/waitFor"
         },
         "expect": {
-          "type": "array",
-          "description": "Expected rows. Each object maps column names to expected values.",
-          "items": {
-            "type": "object",
-            "additionalProperties": true
-          }
+          "description": "Expected result. Use an array of objects for SQL row assertions, or a single object for key-value assertions (Redis, mock).",
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Expected rows returned by a SQL query. Each object maps column names to expected values.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            {
+              "type": "object",
+              "description": "Expected key-value pairs for Redis or mock server assertions.",
+              "additionalProperties": true
+            }
+          ]
         }
       }
     },

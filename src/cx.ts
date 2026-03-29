@@ -40,7 +40,7 @@ function which(cmd: string): string | undefined {
   try {
     const out = child_process.execSync(
       process.platform === 'win32' ? `where ${cmd}` : `which ${cmd}`,
-      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] },
     );
     return out.trim().split('\n')[0];
   } catch {
@@ -55,12 +55,12 @@ export function checkVersion(): void {
       vscode.window
         .showWarningMessage(
           'crosscheck: cx binary not found. Install it to use run/validate features.',
-          'Open docs'
+          'Open docs',
         )
-        .then(choice => {
+        .then((choice) => {
           if (choice === 'Open docs') {
             vscode.env.openExternal(
-              vscode.Uri.parse('https://github.com/lozymon/crosscheck')
+              vscode.Uri.parse('https://github.com/lozymon/crosscheck'),
             );
           }
         });
@@ -81,7 +81,7 @@ export function checkVersion(): void {
 
     if (tooOld) {
       vscode.window.showWarningMessage(
-        `crosscheck: cx ${maj}.${min}.${patch} is below minimum supported version ${MIN_VERSION.join('.')}. Please upgrade.`
+        `crosscheck: cx ${maj}.${min}.${patch} is below minimum supported version ${MIN_VERSION.join('.')}. Please upgrade.`,
       );
     }
   });
@@ -92,14 +92,17 @@ export function buildArgs(file: string | undefined, extra: string[]): string[] {
   const envFile = config.get<string>('defaultEnvFile', '.env');
   const insecure = config.get<boolean>('insecure', false);
 
-  const args: string[] = file ? [file] : [];
+  const args: string[] = file ? ['run', file] : ['run'];
   args.push('--env-file', envFile);
   if (insecure) args.push('--insecure');
   args.push(...extra);
   return args;
 }
 
-export function spawnCx(args: string[], cwd?: string): child_process.ChildProcess {
+export function spawnCx(
+  args: string[],
+  cwd?: string,
+): child_process.ChildProcess {
   const cx = resolveCx();
   const channel = getOutputChannel();
   channel.show(true);
@@ -111,7 +114,9 @@ export function spawnCx(args: string[], cwd?: string): child_process.ChildProces
   const proc = child_process.spawn(cx, args, { cwd: workspaceCwd });
   proc.stdout?.on('data', (d: Buffer) => channel.append(d.toString()));
   proc.stderr?.on('data', (d: Buffer) => channel.append(d.toString()));
-  proc.on('close', code => channel.appendLine(`\n[exited with code ${code}]`));
+  proc.on('close', (code) =>
+    channel.appendLine(`\n[exited with code ${code}]`),
+  );
 
   return proc;
 }

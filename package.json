@@ -12,8 +12,16 @@
   "engines": {
     "vscode": "^1.75.0"
   },
-  "categories": ["Testing", "Linters"],
-  "keywords": ["crosscheck", "cx", "api testing", "yaml"],
+  "categories": [
+    "Testing",
+    "Linters"
+  ],
+  "keywords": [
+    "crosscheck",
+    "cx",
+    "api testing",
+    "yaml"
+  ],
   "activationEvents": [
     "onLanguage:yaml",
     "workspaceContains:**/*.cx.yaml"
@@ -24,7 +32,9 @@
       {
         "scopeName": "source.cx.yaml",
         "path": "./syntaxes/crosscheck.tmLanguage.json",
-        "injectTo": ["source.yaml"]
+        "injectTo": [
+          "source.yaml"
+        ]
       }
     ],
     "yamlValidation": [

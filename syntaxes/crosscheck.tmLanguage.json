@@ -4,6 +4,7 @@
   "scopeName": "source.cx.yaml",
   "injectionSelector": "L:source.yaml - comment",
   "patterns": [
+    { "include": "#sql-query" },
     { "include": "#variable-capture" },
     { "include": "#variable-interpolation" },
     { "include": "#named-param" },
@@ -33,6 +34,39 @@
       "comment": ":paramName in SQL queries / URLs — named parameter placeholder",
       "match": "(?<=[\\s\"',(=]):[a-zA-Z_][a-zA-Z0-9_]*\\b",
       "name": "variable.parameter.named.crosscheck"
+    },
+    "sql-query": {
+      "comment": "SQL embedded in query: '...' — custom keyword-only SQL highlighting",
+      "begin": "(?<=query:)\\s*(['\"])",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.string.begin.yaml" }
+      },
+      "end": "\\1",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.yaml" }
+      },
+      "patterns": [
+        { "include": "#variable-capture" },
+        { "include": "#variable-interpolation" },
+        { "include": "#named-param" },
+        { "include": "#sql-keyword" },
+        { "include": "#sql-number" },
+        { "include": "#sql-string" }
+      ]
+    },
+    "sql-keyword": {
+      "comment": "Standard SQL statement keywords only — not identifiers like name/email",
+      "match": "(?i)\\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|FULL|CROSS|ON|AS|AND|OR|NOT|NULL|IN|LIKE|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET|INTO|VALUES|SET|CREATE|DROP|ALTER|TABLE|INDEX|VIEW|DISTINCT|COUNT|SUM|AVG|MIN|MAX|CASE|WHEN|THEN|ELSE|END|IS|BETWEEN|EXISTS|UNION|ALL|WITH|ASC|DESC|RETURNING)\\b",
+      "name": "keyword.other.DML.sql"
+    },
+    "sql-number": {
+      "match": "\\b[0-9]+(\\.[0-9]+)?\\b",
+      "name": "constant.numeric.sql"
+    },
+    "sql-string": {
+      "begin": "'",
+      "end": "'",
+      "name": "string.quoted.single.sql.crosscheck"
     },
     "toplevel-key": {
       "comment": "crosscheck top-level and structural keys",
