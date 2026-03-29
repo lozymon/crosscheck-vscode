@@ -93,6 +93,11 @@ export function setActiveEnvFile(p: string): void {
   _activeEnvFile = p;
 }
 
+export function getActiveEnvFile(): string {
+  const config = vscode.workspace.getConfiguration('crosscheck');
+  return _activeEnvFile ?? config.get<string>('defaultEnvFile', '.env');
+}
+
 export function buildArgs(file: string | undefined, extra: string[]): string[] {
   const config = vscode.workspace.getConfiguration('crosscheck');
   const envFile =

@@ -1,29 +1,17 @@
+import * as child_process from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { buildArgs, spawnCx } from './cx';
+import { buildArgs, spawnCx, getActiveEnvFile } from './cx';
 import { parseFile } from './parser';
-import { applyDecorations, clearDecorations } from './decorations';
-
-// Shape of a single test in the JSON reporter output
-interface JsonTestResult {
-  name: string;
-  passed: boolean;
-  attempts: number;
-  failures: Array<{ step: string; message: string }>;
-  error: string | null;
-}
-
-// Shape of the JSON reporter output file
-interface JsonSuiteResult {
-  suite: string;
-  passed: number;
-  failed: number;
-  setup_error?: string;
-  teardown_error?: string;
-  tests: JsonTestResult[];
-}
+import { applyDecorations } from './decorations';
+import {
+  showResultsPanel,
+  JsonSuiteResult,
+  JsonTestResult,
+  RunMeta,
+} from './resultsPanel';
 
 export function createTestController(
   context: vscode.ExtensionContext,
@@ -94,6 +82,8 @@ async function runTests(
   token: vscode.CancellationToken,
 ): Promise<void> {
   const run = ctrl.createTestRun(request);
+  const allResults: JsonSuiteResult[] = [];
+  const runAt = new Date();
 
   // Collect which suite files to run
   const suitesToRun = new Map<string, vscode.TestItem[]>(); // filePath → test items
@@ -124,7 +114,8 @@ async function runTests(
 
     try {
       const exitCode = await runFile(filePath, tmpFile, token);
-      applyResults(ctrl, run, filePath, tmpFile, exitCode);
+      const suiteResult = applyResults(ctrl, run, filePath, tmpFile, exitCode);
+      if (suiteResult) allResults.push(suiteResult);
     } catch (err) {
       // Connection error or binary not found
       suite.children.forEach((child) =>
@@ -140,6 +131,26 @@ async function runTests(
   }
 
   run.end();
+
+  if (allResults.length > 0) {
+    let gitUser: string | undefined;
+    try {
+      const wsFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      gitUser =
+        child_process
+          .execSync('git config user.name', {
+            cwd: wsFolder,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+          })
+          .trim() || undefined;
+    } catch {
+      /* not a git repo or no user set */
+    }
+
+    const meta: RunMeta = { runAt, envFile: getActiveEnvFile(), gitUser };
+    showResultsPanel(allResults, meta);
+  }
 }
 
 function runFile(
@@ -169,7 +180,7 @@ function applyResults(
   filePath: string,
   outputFile: string,
   exitCode: number,
-): void {
+): JsonSuiteResult | undefined {
   const suite = ctrl.items.get(filePath);
   if (!suite) return;
 
@@ -183,7 +194,7 @@ function applyResults(
     suite.children.forEach((child) =>
       run.errored(child, new vscode.TestMessage(label)),
     );
-    return;
+    return undefined;
   }
 
   let result: JsonSuiteResult;
@@ -194,7 +205,7 @@ function applyResults(
       suite,
       new vscode.TestMessage('Could not read cx JSON output.'),
     );
-    return;
+    return undefined;
   }
 
   if (result.setup_error) {
@@ -239,13 +250,14 @@ function applyResults(
   }
 
   // Drive inline decorations from test results
-  const uri = vscode.Uri.file(filePath);
   const editor = vscode.window.visibleTextEditors.find(
     (e) => e.document.uri.fsPath === filePath,
   );
   if (editor) {
     applyDecorations(editor, failures);
   }
+
+  return result;
 }
 
 function findTestItem(
