@@ -82,10 +82,11 @@ function buildMetaHtml(meta: RunMeta): string {
 
 function buildSuiteHtml(suite: JsonSuiteResult): string {
   const name = path.basename(suite.suite);
-  const total = suite.tests.length;
+  const tests = suite.tests ?? [];
+  const total = tests.length;
 
   let rows = '';
-  for (const t of suite.tests) {
+  for (const t of tests) {
     let badgeClass: string;
     let badgeText: string;
     let details = '';
@@ -144,7 +145,15 @@ function buildSuiteHtml(suite: JsonSuiteResult): string {
 }
 
 function buildHtml(suites: JsonSuiteResult[], meta: RunMeta): string {
-  const body = suites.map(buildSuiteHtml).join('\n');
+  const body = suites
+    .map((s) => {
+      try {
+        return buildSuiteHtml(s);
+      } catch {
+        return `<section class="suite"><div class="alert">Failed to render suite: ${esc(String(s?.suite ?? '?'))}</div></section>`;
+      }
+    })
+    .join('\n');
 
   return `<!DOCTYPE html>
 <html lang="en">

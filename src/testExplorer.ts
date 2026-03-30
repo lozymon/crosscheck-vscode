@@ -6,12 +6,7 @@ import * as vscode from 'vscode';
 import { buildArgs, spawnCx, getActiveEnvFile } from './cx';
 import { parseFile } from './parser';
 import { applyDecorations } from './decorations';
-import {
-  showResultsPanel,
-  JsonSuiteResult,
-  JsonTestResult,
-  RunMeta,
-} from './resultsPanel';
+import { showResultsPanel, JsonSuiteResult, RunMeta } from './resultsPanel';
 
 export async function runViaController(
   ctrl: vscode.TestController,
@@ -103,8 +98,8 @@ async function runTests(
   token: vscode.CancellationToken,
 ): Promise<void> {
   const run = ctrl.createTestRun(request);
-  const allResults: JsonSuiteResult[] = [];
   const runAt = new Date();
+  const runResults: JsonSuiteResult[] = [];
 
   // Collect which suite files to run
   const suitesToRun = new Map<string, vscode.TestItem[]>(); // filePath → test items
@@ -131,15 +126,30 @@ async function runTests(
     suite.children.forEach((child) => run.started(child));
     if (items.length === 1 && items[0].id === filePath) run.started(suite);
 
-    const tmpFile = path.join(os.tmpdir(), `cx-results-${Date.now()}.json`);
+    // Snapshot children NOW so refresh watcher can't replace items mid-run
+    const childMap = new Map<string, vscode.TestItem>();
+    suite.children.forEach((child) => childMap.set(child.label, child));
+
+    const tmpFile = path.join(
+      os.tmpdir(),
+      `cx-results-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    );
 
     try {
-      const exitCode = await runFile(filePath, tmpFile, token);
-      const suiteResult = applyResults(ctrl, run, filePath, tmpFile, exitCode);
-      if (suiteResult) allResults.push(suiteResult);
+      const { exitCode, stderr } = await runFile(filePath, tmpFile, token);
+      const suiteResult = applyResults(
+        suite,
+        childMap,
+        run,
+        filePath,
+        tmpFile,
+        exitCode,
+        stderr,
+      );
+      if (suiteResult) runResults.push(suiteResult);
     } catch (err) {
       // Connection error or binary not found
-      suite.children.forEach((child) =>
+      childMap.forEach((child) =>
         run.errored(child, new vscode.TestMessage(String(err))),
       );
     } finally {
@@ -153,6 +163,7 @@ async function runTests(
 
   run.end();
 
+  const allResults = runResults;
   if (allResults.length > 0) {
     let gitUser: string | undefined;
     try {
@@ -178,7 +189,7 @@ function runFile(
   filePath: string,
   outputFile: string,
   token: vscode.CancellationToken,
-): Promise<number> {
+): Promise<{ exitCode: number; stderr: string }> {
   return new Promise((resolve, reject) => {
     const args = buildArgs(filePath, [
       '--reporter',
@@ -188,34 +199,54 @@ function runFile(
     ]);
     const proc = spawnCx(args);
 
+    const stderrChunks: Buffer[] = [];
+    proc.stderr?.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
+
     token.onCancellationRequested(() => proc.kill());
 
-    proc.on('close', (code) => resolve(code ?? 1));
+    proc.on('close', (code) =>
+      resolve({
+        exitCode: code ?? 1,
+        stderr: Buffer.concat(stderrChunks).toString().trim(),
+      }),
+    );
     proc.on('error', reject);
   });
 }
 
 function applyResults(
-  ctrl: vscode.TestController,
+  suite: vscode.TestItem,
+  childMap: Map<string, vscode.TestItem>,
   run: vscode.TestRun,
   filePath: string,
   outputFile: string,
   exitCode: number,
+  stderr: string = '',
 ): JsonSuiteResult | undefined {
-  const suite = ctrl.items.get(filePath);
-  if (!suite) return;
-
   // Exit code 2 = YAML/config error, 3 = connection error — suite-level failure
   if (exitCode === 2 || exitCode === 3) {
     const label = exitCode === 2 ? 'Validation error' : 'Connection error';
-    run.errored(
-      suite,
-      new vscode.TestMessage(`cx exited with code ${exitCode}: ${label}`),
-    );
+    // Try to read setup_error from JSON output — it often contains the real cause
+    let detail = stderr ? `\n\n${stderr}` : '';
+    try {
+      const parsed = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+      if (parsed.setup_error) {
+        detail = `\n\n${parsed.setup_error.trim()}`;
+      }
+    } catch {
+      /* JSON may not exist; fall back to stderr */
+    }
+    run.errored(suite, new vscode.TestMessage(`${label}${detail}`));
     suite.children.forEach((child) =>
-      run.errored(child, new vscode.TestMessage(label)),
+      run.errored(child, new vscode.TestMessage(`${label}${detail}`)),
     );
-    return undefined;
+    return {
+      suite: suite.label,
+      passed: 0,
+      failed: 0,
+      setup_error: `${label}${detail}`,
+      tests: [],
+    };
   }
 
   let result: JsonSuiteResult;
@@ -238,8 +269,8 @@ function applyResults(
 
   const failures: Array<{ line: number; message: string }> = [];
 
-  for (const t of result.tests) {
-    const item = findTestItem(suite, t.name);
+  for (const t of result.tests ?? []) {
+    const item = childMap.get(t.name);
     if (!item) continue;
 
     if (t.passed) {
