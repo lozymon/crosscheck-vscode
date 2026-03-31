@@ -30,6 +30,11 @@ export interface RunMeta {
 }
 
 let panel: vscode.WebviewPanel | undefined;
+let extensionUri: vscode.Uri | undefined;
+
+export function initResultsPanel(uri: vscode.Uri): void {
+  extensionUri = uri;
+}
 
 export function showResultsPanel(
   suites: JsonSuiteResult[],
@@ -44,6 +49,9 @@ export function showResultsPanel(
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: false },
       { enableScripts: false },
     );
+    if (extensionUri) {
+      panel.iconPath = vscode.Uri.joinPath(extensionUri, 'icon.png');
+    }
     panel.onDidDispose(() => {
       panel = undefined;
     });

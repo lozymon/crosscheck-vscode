@@ -4,6 +4,11 @@ import { resolveCx } from './cx';
 
 let panel: vscode.WebviewPanel | undefined;
 let currentFile: string | undefined;
+let extensionUri: vscode.Uri | undefined;
+
+export function initExplainPanel(uri: vscode.Uri): void {
+  extensionUri = uri;
+}
 
 export function showExplainPanel(filePath: string): void {
   currentFile = filePath;
@@ -17,6 +22,9 @@ export function showExplainPanel(filePath: string): void {
       vscode.ViewColumn.Beside,
       { enableScripts: false }
     );
+    if (extensionUri) {
+      panel.iconPath = vscode.Uri.joinPath(extensionUri, 'icon.png');
+    }
     panel.onDidDispose(() => {
       panel = undefined;
       currentFile = undefined;

@@ -5,7 +5,8 @@ import { CrosscheckCodelensProvider } from './codelens';
 import { CrosscheckCompletionProvider } from './completion';
 import { buildArgs, checkVersion, resolveCx, spawnCx } from './cx';
 import { clearDecorations } from './decorations';
-import { showExplainPanel, refreshExplainPanel } from './explainPanel';
+import { showExplainPanel, refreshExplainPanel, initExplainPanel } from './explainPanel';
+import { initResultsPanel } from './resultsPanel';
 import { CrosscheckQueryPreviewProvider } from './queryPreview';
 import { CrosscheckDocumentSymbolProvider } from './symbols';
 import { createTestController, runViaController } from './testExplorer';
@@ -19,6 +20,8 @@ import { createWatchStatusBar, disposeWatch, toggleWatch } from './statusBar';
 
 export function activate(context: vscode.ExtensionContext): void {
   checkVersion();
+  initExplainPanel(context.extensionUri);
+  initResultsPanel(context.extensionUri);
 
   // ── Phase 1 ────────────────────────────────────────────────────────────────
 
