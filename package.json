@@ -4,6 +4,7 @@
   "description": "VS Code extension for crosscheck (cx) API test files — syntax highlighting, CodeLens, schema autocomplete, and more.",
   "version": "0.1.0",
   "publisher": "lozymon",
+  "icon": "icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
